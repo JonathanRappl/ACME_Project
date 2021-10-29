@@ -4,4 +4,5 @@ echo "Changing to ${DIRECTORY}"
 cd  "$DIRECTORY" || exit 1
 
 echo "Run your project here."
-#comment
+
+python3 main.py "$@"
