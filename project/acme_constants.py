@@ -7,3 +7,5 @@ TOS_BODY = {"termsOfServiceAgreed": True}
 EC_CURVE = SECP256R1
 
 ALG = "ES256"
+
+CT_HEADER = {"Content-Type": "application/jose+json"}

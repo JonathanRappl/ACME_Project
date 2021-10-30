@@ -34,11 +34,18 @@ def main():
 
     # ---------------CLIENT----------------
     client = acme_client.ACME_Client(arguments['dir'])
-    server_dict = client.get_server_dict()
-    nice_printer(server_dict, "SERVER DICT")
+    client.get_server_dict()
+    # -------------------------------------
     client.get_fresh_nonce()
+    # -------------------------------------
     client.create_account()
     # -------------------------------------
+    client.request_certificate(arguments['domain'])
+    # -------------------------------------
+    client.fetch_challenges()
+    # -------------------------------------
+    client.resolve_challenges(arguments['challenge'])
+
 # -----------------------------------------------
 
 if __name__ == "__main__":

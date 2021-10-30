@@ -44,7 +44,10 @@ class JWS:
     def create_jws (self, header : dict, payload : dict) -> bytes:
         # print("Header:", header)
         header = encode(header)
-        payload = encode(payload)
+        if payload != None:
+            payload = encode(payload)
+        else:
+            payload = b''
 
         signature_data = header + b'.' + payload
         signature = base64.urlsafe_b64encode(self.private_key.sign(signature_data, PKCS1v15(), SHA256())).rstrip(b'=')
