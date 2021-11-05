@@ -4,6 +4,7 @@ import time
 import requests
 import acme_client
 import dns_server
+import subprocess
 
 from dnslib.server import DNSServer
 # -----------------------------------------------
@@ -19,7 +20,7 @@ def argument_parser():
     parser.add_argument('--record', required=True)
     parser.add_argument('--domain', required=True, action='append')
     parser.add_argument('--revoke', required=False)
-    return vars(parser.parse_args())
+    return parser.parse_args()
 # -----------------------------------------------
 
 # -----------------NICE PRINTER------------------
@@ -39,7 +40,8 @@ def nice_announcement_printer(head : str):
 
 # ---------------------MAIN----------------------
 def main():
-    arguments = argument_parser()
+    arguments_no_vars = argument_parser()
+    arguments = vars(arguments_no_vars)
     nice_printer(arguments, "ARGUMENTS")
 
     # -------------DNS SERVER--------------
@@ -61,10 +63,13 @@ def main():
     client.fetch_challenges()
     # -------------------------------------
     client.resolve_challenges(arguments['challenge'], arguments['record'])
-    time.sleep(10) # -----------------------
+    # time.sleep(8) # -----------------------
     client.finalize_order()
-
     #--------------------------------------
+    certificate = client.get_certificate()
+    open('certs', 'w').write(certificate)
+    
+    https = subprocess.Popen(['python3', 'https_server.py', arguments['record']])
 
 # -----------------------------------------------
 

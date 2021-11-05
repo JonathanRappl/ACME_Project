@@ -1,12 +1,8 @@
 # --------------------IMPORTS--------------------
-import copy
 from typing import Tuple
-import dnslib
 import acme_client
 
-from dnslib import dns
 from dnslib.dns import RR
-from dnslib.fixedresolver import FixedResolver
 from dnslib.server import DNSServer
 
 from main import nice_printer

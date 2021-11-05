@@ -104,6 +104,8 @@ class JWS:
 
     def create_csr(self, domains : List[str]) -> str:
         self.csr_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
+        csr_private_bytes = self.csr_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+        open('csr_key', 'w').write(csr_private_bytes.decode())
         csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
             x509.NameAttribute(NameOID.COMMON_NAME, domains[0]),
         ])).add_extension(

@@ -172,6 +172,7 @@ class ACME_Client:
         client_nice_printer(response.status_code, "DNS RESPONSE STATUS CODE")
         client_nice_printer(response.json(), "DNS RESPONSE JSON")
         client_nice_printer(json.dumps(dict(response.headers)), "DNS RESPONSE RESPONSE HEADERS")
+        time.sleep(5)
 
     def resolve_http_challenge(self, challenge : Challenge) -> None:
         pass
@@ -185,18 +186,18 @@ class ACME_Client:
         client_nice_printer(response.status_code, "FINALIZE STATUS CODE")
         client_nice_printer(response.json(), "FINALIZE JSON")
         client_nice_printer(json.dumps(dict(response.headers)), "FINALIZE RESPONSE HEADERS")
-        if response.status_code == 403: 
-            if response.json()['type'] == 'urn:ietf:params:acme:error:orderNotReady':
-                header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, self.location)
-                jws = self.jws.create_jws(header, None)
-                response = requests.post(self.location, data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
-                self.replay_nonce = response.headers['Replay-Nonce']
-                client_nice_printer(response.status_code, "PAG STATUS CODE")
-                client_nice_printer(response.json(), "PAG JSON")
-                client_nice_printer(json.dumps(dict(response.headers)), "PAG RESPONSE HEADERS")
-        if response.json()['status'] == 'processing':
-            client_nice_announcement_printer("ORDER STILL PROCESSING, SENDING PAG")
-            time.sleep(5)
+        # if response.status_code == 403: 
+        #     if response.json()['type'] == 'urn:ietf:params:acme:error:orderNotReady':
+        #         header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, self.location)
+        #         jws = self.jws.create_jws(header, None)
+        #         response = requests.post(self.location, data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
+        #         self.replay_nonce = response.headers['Replay-Nonce']
+        #         client_nice_printer(response.status_code, "PAG STATUS CODE")
+        #         client_nice_printer(response.json(), "PAG JSON")
+        #         client_nice_printer(json.dumps(dict(response.headers)), "PAG RESPONSE HEADERS")
+        while response.json()['status'] == 'processing':
+            client_nice_announcement_printer("ORDER STILL PROCESSING, SENDING PAG...")
+            time.sleep(2)
             header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, self.location)
             jws = self.jws.create_jws(header, None)
             response = requests.post(self.location, data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
@@ -204,6 +205,23 @@ class ACME_Client:
             client_nice_printer(response.status_code, "PAG STATUS CODE")
             client_nice_printer(response.json(), "PAG JSON")
             client_nice_printer(json.dumps(dict(response.headers)), "PAG RESPONSE HEADERS")
+    
+    def get_certificate(self) -> str:
+        header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, self.location)
+        jws = self.jws.create_jws(header, None)
+        response = requests.post(self.location, data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
+        certificate_url = response.json()['certificate']
+        self.replay_nonce = response.headers['Replay-Nonce']
+
+        header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, certificate_url)
+        jws = self.jws.create_jws(header, None)
+        response = requests.post(certificate_url, data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
+        self.replay_nonce = response.headers['Replay-Nonce']
+        self.certificate = response.text
+        client_nice_printer(response.status_code, "GET CERT STATUS CODE")
+        client_nice_printer(response.text, "GET CERT TEXT")
+        client_nice_printer(json.dumps(dict(response.headers)), "GET CERT RESPONSE HEADERS")
+        return self.certificate
 
 
 
