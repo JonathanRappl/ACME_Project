@@ -68,8 +68,10 @@ def main():
     #--------------------------------------
     certificate = client.get_certificate()
     open('certs', 'w').write(certificate)
-    
+
     https = subprocess.Popen(['python3', 'https_server.py', arguments['record']])
+    time.sleep(10)
+    https.kill()
 
 # -----------------------------------------------
 
