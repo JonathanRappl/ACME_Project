@@ -1,7 +1,11 @@
 # --------------------IMPORTS--------------------
 import argparse
+import time
 import requests
 import acme_client
+import dns_server
+
+from dnslib.server import DNSServer
 # -----------------------------------------------
 
 # --------------------PARSER---------------------
@@ -25,6 +29,12 @@ def nice_printer(stuff : object, head : str):
     print(buff*"-", head, (width-len(head)-buff)*"-")
     print(stuff)
     print((2+width)*"-")
+
+def nice_announcement_printer(head : str):
+    width = 150
+    margin = 0
+    buff = (width-len(head))//2
+    print((buff-margin)*"-", head, (width-len(head)-buff-margin)*"-")
 # -----------------------------------------------
 
 # ---------------------MAIN----------------------
@@ -32,19 +42,29 @@ def main():
     arguments = argument_parser()
     nice_printer(arguments, "ARGUMENTS")
 
+    # -------------DNS SERVER--------------
+    dns, resolver = dns_server.create_dns_server(arguments['record'])
+    dns.start_thread()
+    nice_announcement_printer("DNS SERVER UP AND RUNNING")
+    # -------------------------------------
+
     # ---------------CLIENT----------------
-    client = acme_client.ACME_Client(arguments['dir'])
-    client.get_server_dict()
+    client = acme_client.ACME_Client(arguments['dir'], resolver)
+    nice_printer(client.get_server_dict(), "SERVER DICT")
     # -------------------------------------
     client.get_fresh_nonce()
     # -------------------------------------
     client.create_account()
     # -------------------------------------
     client.request_certificate(arguments['domain'])
-    # -------------------------------------
+    # time.sleep(5) # ---------------------
     client.fetch_challenges()
     # -------------------------------------
-    client.resolve_challenges(arguments['challenge'])
+    client.resolve_challenges(arguments['challenge'], arguments['record'])
+    time.sleep(10) # -----------------------
+    client.finalize_order()
+
+    #--------------------------------------
 
 # -----------------------------------------------
 
