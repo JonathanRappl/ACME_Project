@@ -70,7 +70,8 @@ def main():
     open('certs', 'w').write(certificate)
 
     https = subprocess.Popen(['python3', 'https_server.py', arguments['record']])
-    time.sleep(10)
+    time.sleep(100)
+    
     https.kill()
 
 # -----------------------------------------------

@@ -5,7 +5,7 @@ import acme_client
 from dnslib.dns import RR
 from dnslib.server import DNSServer
 
-from main import nice_printer
+from main import nice_printer, nice_announcement_printer
 # -----------------------------------------------
 
 # -------------------RESOLVER--------------------
@@ -20,11 +20,10 @@ class CustomResolver:
     def resolve(self,request,handler):
         reply = request.reply()
         qname_str = str(request.q.qname)
-        nice_printer(qname_str, "QNAME STR")
         reply.add_answer(*RR.fromZone(self.zones_dict[qname_str[16:-1]][0]))
         # for answer in self.zones_dict[qname_str[16:-1]]:
         #     reply.add_answer(*RR.fromZone(answer))
-        nice_printer(reply, "REPLY")
+        nice_announcement_printer("PROCESSED DNS REQUEST")
         return reply
         # Replace labels with request label
         for zone in self.zones:

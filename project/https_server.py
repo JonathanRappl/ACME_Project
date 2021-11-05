@@ -5,8 +5,8 @@ import argparse
 app = Flask(__name__)
 
 @app.route("/")
-def main():
-    return None
+def index():
+    return open("certs", "r").read()
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('record')

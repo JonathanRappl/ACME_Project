@@ -84,69 +84,60 @@ class ACME_Client:
         else:
             client_nice_announcement_printer("FRESH NONCE COULD NOT BE FETCHED")
         
-    def retry_bad_nonce(self, url : str, data : dict, headers : dict) -> Response:
-        """
-        We call this if we get a bad nonce error code
-        """
-        # CURRENTLY WE ARE NOT USING THIS FUNCTION
-        response_valid = False
-        while not response_valid:
-            response = requests.post(url, data=data, headers=headers, verify='pebble.minica.pem')
-            if response.status_code == 400 and response.json()["type"] == 'urn:ietf:params:acme:error:badNonce':
-                client_nice_announcement_printer("NONCE REJECTED, RETRYING...")
-            else:
-                response_valid = True
-                # self.replay_nonce = response.headers['Replay-Nonce']
-                client_nice_announcement_printer("GOTTEN VALID RESPONSE")
-                return response
+    # def retry_bad_nonce(self, url : str, data : dict, headers : dict) -> Response:
+    #     """
+    #     We call this if we get a bad nonce error code
+    #     """
+    #     # CURRENTLY WE ARE NOT USING THIS FUNCTION
+    #     response_valid = False
+    #     while not response_valid:
+    #         response = requests.post(url, data=data, headers=headers, verify='pebble.minica.pem')
+    #         if response.status_code == 400 and response.json()["type"] == 'urn:ietf:params:acme:error:badNonce':
+    #             client_nice_announcement_printer("NONCE REJECTED, RETRYING...")
+    #         else:
+    #             response_valid = True
+    #             # self.replay_nonce = response.headers['Replay-Nonce']
+    #             client_nice_announcement_printer("GOTTEN VALID RESPONSE")
+    #             return response
 
+    def send_post(self, url : str, body : dict = None, jwk : dict = None) -> Response:
+        if jwk == None:
+            kid = self.kid
+        else:
+            kid = None
+        header = self.jws.create_jws_header(jwk, kid, self.replay_nonce, url)
+        jws = self.jws.create_jws(header, body)
+        response = requests.post(url, data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
+        self.replay_nonce = response.headers['Replay-Nonce']
+        return response
     
     def create_account(self) -> None:
         jwk = self.jws.create_jwk(self.jws.public_key)
-        header = self.jws.create_jws_header(jwk, None, self.replay_nonce, self.server_dict['newAccount'])
-        body = TOS_BODY
-        jws = self.jws.create_jws(header, body)
-        response = requests.post(self.server_dict['newAccount'], data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
+        response = self.send_post(self.server_dict['newAccount'], TOS_BODY, jwk)
         if response.status_code == 201:
             client_nice_announcement_printer("NEW ACCOUNT CREATED")
             self.kid = response.headers['Location']
-            self.replay_nonce = response.headers['Replay-Nonce']
         else:
             client_nice_announcement_printer("SERVER COULDN'T CREATE A NEW ACCOUNT")
-        # client_nice_printer(response.status_code, "RESPONSE CODE")
-        # client_nice_printer(response.json(), "RESPONSE JSON")
-        # client_nice_printer(json.dumps(dict(response.headers)), "RESPONSE HEADERS")
-        # client_nice_printer(response.headers['Location'], "KID")
-        # client_nice_printer(response.headers['Replay-Nonce'], "NEW REPLAY NONCE")
     
     def request_certificate(self, domains : list) -> None:
         identifiers = []
         for domain in domains:
             identifiers.append({"type": "dns", "value": domain})
-        header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, self.server_dict['newOrder'])
-        body = {"identifiers": identifiers}
-        jws = self.jws.create_jws(header, body)
-        response = requests.post(self.server_dict['newOrder'], data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
+        response = self.send_post(self.server_dict['newOrder'], {"identifiers": identifiers})
         if response.status_code == 201:
             client_nice_announcement_printer("CERTIFICATE ORDER SUCCESSFULL")
             self.domains = domains
             self.authorizations = response.json()['authorizations']
             self.finalize = response.json()['finalize']
             self.location = response.headers['Location']
-            self.replay_nonce = response.headers['Replay-Nonce']
         else:
             client_nice_announcement_printer("CERTIFICATE ORDER UNSUCCESSFULL")
-        # client_nice_printer(response.status_code, "REQUEST CERTIFICATE STATUS CODE")
-        # client_nice_printer(response.json(), "REQUEST CERTIFICATE JSON")
-        # client_nice_printer(json.dumps(dict(response.headers)), "REQUEST CERTIFICATE RESPONSE HEADERS")
     
     def fetch_challenges(self) -> None:
         self.challenges = []
         for authorization in self.authorizations:
-            header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, authorization)
-            jws = self.jws.create_jws(header, None)
-            response = requests.post(authorization, data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
-            self.replay_nonce = response.headers['Replay-Nonce']
+            response = self.send_post(authorization)
             for fetched_challenge in response.json()['challenges']:
                 self.challenges.append(Challenge(response.json()['identifier']['value'], fetched_challenge))
         client_nice_announcement_printer("CHALLENGES FETCHED")
@@ -155,72 +146,40 @@ class ACME_Client:
         client_nice_announcement_printer("RESOLVING CHALLENGES...")
         for challenge in self.challenges:
             if challenge_type == 'dns01' and challenge.type == 'dns-01':
-                client_nice_printer(challenge.__dict__, "RESOLVING DNS CHALLENGE")
                 self.resolve_dns_challenge(challenge, record)
             elif challenge_type == 'http01' and challenge.type == 'http-01':
                 client_nice_printer(challenge.__dict__, "RESOLVING HTTP CHALLENGE")
                 self.resolve_http_challenge(challenge)
     
     def resolve_dns_challenge(self, challenge : Challenge, record : str) -> None:
+        client_nice_printer(challenge.__dict__, "RESOLVING DNS CHALLENGE")
         key_authorization_hash = self.jws.create_key_authorization_hash(challenge.token)
-        client_nice_printer(challenge.identifier_value, "CHALLENGE IDENTIFIER VALUE")
         self.resolver.zones_dict[challenge.identifier_value] = ["_acme-challenge.{}. 300 IN TXT {}".format(challenge.identifier_value, key_authorization_hash.decode('utf-8')), "_acme-challenge.{}. 300 IN A {}".format(challenge.identifier_value, record)]
-        header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, challenge.url)
-        jws = self.jws.create_jws(header, {})
-        response = requests.post(challenge.url, data=json.dumps(jws, separators=(",", ":")), headers=CT_HEADER, verify='pebble.minica.pem')
-        self.replay_nonce = response.headers['Replay-Nonce']
-        client_nice_printer(response.status_code, "DNS RESPONSE STATUS CODE")
-        client_nice_printer(response.json(), "DNS RESPONSE JSON")
-        client_nice_printer(json.dumps(dict(response.headers)), "DNS RESPONSE RESPONSE HEADERS")
+        response = self.send_post(challenge.url, {})
         time.sleep(5)
 
     def resolve_http_challenge(self, challenge : Challenge) -> None:
         pass
     
     def finalize_order(self) -> None:
+        client_nice_announcement_printer("FINALIZING ORDER ...")
         csr = self.jws.create_csr(self.domains)
-        header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, self.finalize)
-        jws = self.jws.create_jws(header, {"csr": csr})
-        response = requests.post(self.finalize, data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
-        self.replay_nonce = response.headers['Replay-Nonce']
-        client_nice_printer(response.status_code, "FINALIZE STATUS CODE")
-        client_nice_printer(response.json(), "FINALIZE JSON")
-        client_nice_printer(json.dumps(dict(response.headers)), "FINALIZE RESPONSE HEADERS")
-        # if response.status_code == 403: 
-        #     if response.json()['type'] == 'urn:ietf:params:acme:error:orderNotReady':
-        #         header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, self.location)
-        #         jws = self.jws.create_jws(header, None)
-        #         response = requests.post(self.location, data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
-        #         self.replay_nonce = response.headers['Replay-Nonce']
-        #         client_nice_printer(response.status_code, "PAG STATUS CODE")
-        #         client_nice_printer(response.json(), "PAG JSON")
-        #         client_nice_printer(json.dumps(dict(response.headers)), "PAG RESPONSE HEADERS")
+        response = self.send_post(self.finalize, {"csr": csr})
         while response.json()['status'] == 'processing':
-            client_nice_announcement_printer("ORDER STILL PROCESSING, SENDING PAG...")
+            client_nice_announcement_printer("ORDER STILL PROCESSING, SENDING PAG ...")
             time.sleep(2)
-            header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, self.location)
-            jws = self.jws.create_jws(header, None)
-            response = requests.post(self.location, data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
-            self.replay_nonce = response.headers['Replay-Nonce']
+            response = self.send_post(self.location)
             client_nice_printer(response.status_code, "PAG STATUS CODE")
             client_nice_printer(response.json(), "PAG JSON")
             client_nice_printer(json.dumps(dict(response.headers)), "PAG RESPONSE HEADERS")
     
     def get_certificate(self) -> str:
-        header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, self.location)
-        jws = self.jws.create_jws(header, None)
-        response = requests.post(self.location, data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
+        response = self.send_post(self.location)
         certificate_url = response.json()['certificate']
-        self.replay_nonce = response.headers['Replay-Nonce']
 
-        header = self.jws.create_jws_header(None, self.kid, self.replay_nonce, certificate_url)
-        jws = self.jws.create_jws(header, None)
-        response = requests.post(certificate_url, data=json.dumps(jws), headers=CT_HEADER, verify='pebble.minica.pem')
-        self.replay_nonce = response.headers['Replay-Nonce']
+        response = self.send_post(certificate_url)
         self.certificate = response.text
-        client_nice_printer(response.status_code, "GET CERT STATUS CODE")
         client_nice_printer(response.text, "GET CERT TEXT")
-        client_nice_printer(json.dumps(dict(response.headers)), "GET CERT RESPONSE HEADERS")
         return self.certificate
 
 
