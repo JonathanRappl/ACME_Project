@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["dns01", "--dir", "https://localhost:14000/dir", "--record", "127.0.0.1", "--domain", "netsec.ethz.ch", "--domain", "syssec.ethz.ch"],
+            "args": ["dns01", "--dir", "https://localhost:14000/dir", "--record", "127.0.0.1", "--domain", "example.com", "--domain", "*.example.com"],
             "cwd": "project"
         }
     ]

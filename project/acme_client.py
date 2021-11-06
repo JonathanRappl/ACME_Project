@@ -159,6 +159,7 @@ class ACME_Client:
             "key_authorization_hash" : key_authorization_hash.decode('utf-8')
         }
         response = self.send_post(challenge.url, {})
+        time.sleep(5)
 
     def resolve_http_challenge(self, challenge : Challenge) -> None:
         return
