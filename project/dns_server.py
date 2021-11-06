@@ -33,32 +33,12 @@ class CustomResolver:
         # ELSE
         reply.add_answer(*RR.fromZone(str(request.q.qname) + " 300 IN A " + self.record))
         return reply
-        if "_acme-challenge" in qname_str:
-            reply.add_answer(*RR.fromZone(self.zones_dict[qname_str[16:-1]][0]))
-        else:
-            reply.add_answer(*RR.fromZone(self.zones_dict[qname_str[:-1]][1]))
-        nice_announcement_printer("PROCESSED DNS REQUEST")
-        return reply
-        # Replace labels with request label
-        for zone in self.zones:
-            a = RR.fromZone(str(qname)+zone)
-            # a.rname = qname
-            print(str(qname) + zone)
-            reply.add_answer(a)
-        return reply
-    
-    # def resolve(self,request,_):
-    #     reply = request.reply()
-    #     reply.add_answer(*RR.fromZone(str(request.q.qname) + " 300 IN TXT " + hash_auth_info))
-    #     reply.add_answer(*RR.fromZone(str(request.q.qname) + " 300 IN A " + record))
-    #     return reply
 # -----------------------------------------------
 
 # ------------------DNS SERVER-------------------
 def create_dns_server(record : str) -> Tuple[DNSServer, CustomResolver]:
     resolver = CustomResolver({}, record)
     dns_server = DNSServer(resolver, port=10053, address=record)
-    acme_client.client_nice_announcement_printer("DNS SERVER CREATED")
     return dns_server, resolver
 # -----------------------------------------------
 

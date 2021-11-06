@@ -161,7 +161,10 @@ class ACME_Client:
         response = self.send_post(challenge.url, {})
 
     def resolve_http_challenge(self, challenge : Challenge) -> None:
-        pass
+        return
+        client_nice_printer(challenge.__dict__, "RESOLVING HTTP CHALLENGE")
+        open("acme-challenge/"+challenge.token, "w").write(challenge.token+"."+self.jws.create_jwk_thumbprint().decode('utf-8'))
+        response = self.send_post(challenge.url, {})
     
     def finalize_order(self) -> None:
         client_nice_announcement_printer("FINALIZING ORDER ...")
@@ -183,6 +186,7 @@ class ACME_Client:
     def send_ping(self) -> Response:
         response = self.send_post(self.location)
         client_nice_announcement_printer("PINGING ...")
+        client_nice_printer(response.json()['status'], "PING STATUS")
         return response
 
 
