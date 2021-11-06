@@ -1,8 +1,9 @@
 # --------------------IMPORTS--------------------
+import time
 from typing import Tuple
 import acme_client
 
-from dnslib.dns import RR
+from dnslib.dns import RR, DNSQuestion, DNSRecord
 from dnslib.server import DNSServer
 
 from main import nice_printer, nice_announcement_printer
@@ -17,12 +18,14 @@ class CustomResolver:
     def __init__(self,zone):
         self.zones_dict = zone
 
-    def resolve(self,request,handler):
+    def resolve(self,request : DNSRecord, handler):
         reply = request.reply()
         qname_str = str(request.q.qname)
-        reply.add_answer(*RR.fromZone(self.zones_dict[qname_str[16:-1]][0]))
-        # for answer in self.zones_dict[qname_str[16:-1]]:
-        #     reply.add_answer(*RR.fromZone(answer))
+        nice_printer(qname_str, "QNAME STR")
+        if "_acme-challenge" in qname_str:
+            reply.add_answer(*RR.fromZone(self.zones_dict[qname_str[16:-1]][0]))
+        else:
+            reply.add_answer(*RR.fromZone(self.zones_dict[qname_str][1]))
         nice_announcement_printer("PROCESSED DNS REQUEST")
         return reply
         # Replace labels with request label
