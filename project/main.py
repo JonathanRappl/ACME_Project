@@ -50,6 +50,12 @@ def main():
     nice_announcement_printer("DNS SERVER UP AND RUNNING")
     # -------------------------------------
 
+    # -------------HTTP SERVER-------------
+    if arguments['challenge'] == 'http01':
+        http = subprocess.Popen(['python3', 'http_server.py', arguments['record']])
+        nice_announcement_printer("HTTP CHALLENGE SERVER UP AND RUNNING")
+    # -------------------------------------
+
     # ---------------CLIENT----------------
     client = acme_client.ACME_Client(arguments['dir'], resolver)
     nice_printer(client.get_server_dict(), "SERVER DICT")
@@ -63,11 +69,6 @@ def main():
     client.fetch_challenges()
     time.sleep(5) # ---------------------
     client.resolve_challenges(arguments['challenge'], arguments['record'])
-    while True:
-        time.sleep(1)
-        response = client.send_ping()
-        if response.json()['status'] != 'pending':
-            break
     # -----------------------------------
     client.finalize_order()
     time.sleep(5) #----------------------
@@ -78,6 +79,7 @@ def main():
     time.sleep(20)
 
     https.kill()
+    http.kill()
 
 # -----------------------------------------------
 

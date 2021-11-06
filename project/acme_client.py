@@ -148,7 +148,6 @@ class ACME_Client:
             if challenge_type == 'dns01' and challenge.type == 'dns-01':
                 self.resolve_dns_challenge(challenge, record)
             elif challenge_type == 'http01' and challenge.type == 'http-01':
-                client_nice_printer(challenge.__dict__, "RESOLVING HTTP CHALLENGE")
                 self.resolve_http_challenge(challenge)
     
     def resolve_dns_challenge(self, challenge : Challenge, record : str) -> None:
@@ -159,13 +158,21 @@ class ACME_Client:
             "key_authorization_hash" : key_authorization_hash.decode('utf-8')
         }
         response = self.send_post(challenge.url, {})
-        time.sleep(5)
+        while True:
+            time.sleep(2)
+            response = self.send_ping(challenge.url)
+            if response.json()['status'] != 'pending':
+                break
 
     def resolve_http_challenge(self, challenge : Challenge) -> None:
-        return
         client_nice_printer(challenge.__dict__, "RESOLVING HTTP CHALLENGE")
         open("acme-challenge/"+challenge.token, "w").write(challenge.token+"."+self.jws.create_jwk_thumbprint().decode('utf-8'))
         response = self.send_post(challenge.url, {})
+        while True:
+            time.sleep(2)
+            response = self.send_ping(challenge.url)
+            if response.json()['status'] != 'pending':
+                break
     
     def finalize_order(self) -> None:
         client_nice_announcement_printer("FINALIZING ORDER ...")
@@ -174,9 +181,15 @@ class ACME_Client:
         while response.json()['status'] == 'processing':
             time.sleep(1)
             response = self.send_ping()
+        client_nice_printer(response.json(), "NON PROCESSING RESPONSE")
+        client_nice_printer(response.headers, "NON PROCESSING HEADERS")
     
     def get_certificate(self) -> str:
-        response = self.send_post(self.location)
+        while True:
+            time.sleep(1)
+            response = self.send_ping()
+            if response.json()['status'] != 'pending':
+                break
         certificate_url = response.json()['certificate']
 
         response = self.send_post(certificate_url)
@@ -184,10 +197,14 @@ class ACME_Client:
         client_nice_printer(response.text, "GET CERT TEXT")
         return self.certificate
     
-    def send_ping(self) -> Response:
-        response = self.send_post(self.location)
+    def send_ping(self, url : str = None) -> Response:
+        if url != None:
+            response = self.send_post(url)
+        else:
+            response = self.send_post(self.location)
         client_nice_announcement_printer("PINGING ...")
         client_nice_printer(response.json()['status'], "PING STATUS")
+        client_nice_printer(response.json(), "PING JSON")
         return response
 
 
