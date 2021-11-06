@@ -154,7 +154,10 @@ class ACME_Client:
     def resolve_dns_challenge(self, challenge : Challenge, record : str) -> None:
         client_nice_printer(challenge.__dict__, "RESOLVING DNS CHALLENGE")
         key_authorization_hash = self.jws.create_key_authorization_hash(challenge.token)
-        self.resolver.zones_dict[challenge.identifier_value] = ["_acme-challenge.{}. 300 IN TXT {}".format(challenge.identifier_value, key_authorization_hash.decode('utf-8')), "{}. 300 IN A {}".format(challenge.identifier_value, record)]
+        self.resolver.zones_dict["challenge_id_vals"].append(challenge.identifier_value)
+        self.resolver.zones_dict[challenge.identifier_value] = {
+            "key_authorization_hash" : key_authorization_hash.decode('utf-8')
+        }
         response = self.send_post(challenge.url, {})
         time.sleep(5)
 

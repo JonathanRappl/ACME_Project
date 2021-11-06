@@ -15,13 +15,24 @@ class CustomResolver:
         This class is based on the FixedResolver, but we have to make some changes
         because we cannot directly derive the self.rrs
     """
-    def __init__(self,zone):
-        self.zones_dict = zone
+    def __init__(self,zone,record):
+        self.zones_dict = {
+            "challenge_id_vals" : []
+        }
+        self.record = record
 
     def resolve(self,request : DNSRecord, handler):
         reply = request.reply()
         qname_str = str(request.q.qname)
         nice_printer(qname_str, "QNAME STR")
+        for challenge_id_val in self.zones_dict['challenge_id_vals']:
+            if challenge_id_val in qname_str:
+                reply.add_answer(*RR.fromZone(str(request.q.qname) + " 300 IN TXT " + self.zones_dict[challenge_id_val]['key_authorization_hash']))
+                reply.add_answer(*RR.fromZone(str(request.q.qname) + " 300 IN A " + self.record))
+                return reply
+        # ELSE
+        reply.add_answer(*RR.fromZone(str(request.q.qname) + " 300 IN A " + self.record))
+        return reply
         if "_acme-challenge" in qname_str:
             reply.add_answer(*RR.fromZone(self.zones_dict[qname_str[16:-1]][0]))
         else:
@@ -45,7 +56,7 @@ class CustomResolver:
 
 # ------------------DNS SERVER-------------------
 def create_dns_server(record : str) -> Tuple[DNSServer, CustomResolver]:
-    resolver = CustomResolver({})
+    resolver = CustomResolver({}, record)
     dns_server = DNSServer(resolver, port=10053, address=record)
     acme_client.client_nice_announcement_printer("DNS SERVER CREATED")
     return dns_server, resolver
