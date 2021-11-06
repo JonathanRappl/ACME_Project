@@ -159,7 +159,6 @@ class ACME_Client:
             "key_authorization_hash" : key_authorization_hash.decode('utf-8')
         }
         response = self.send_post(challenge.url, {})
-        time.sleep(5)
 
     def resolve_http_challenge(self, challenge : Challenge) -> None:
         pass
@@ -169,12 +168,8 @@ class ACME_Client:
         csr = self.jws.create_csr(self.domains)
         response = self.send_post(self.finalize, {"csr": csr})
         while response.json()['status'] == 'processing':
-            client_nice_announcement_printer("ORDER STILL PROCESSING, SENDING PAG ...")
-            time.sleep(2)
-            response = self.send_post(self.location)
-            client_nice_printer(response.status_code, "PAG STATUS CODE")
-            client_nice_printer(response.json(), "PAG JSON")
-            client_nice_printer(json.dumps(dict(response.headers)), "PAG RESPONSE HEADERS")
+            time.sleep(1)
+            response = self.send_ping()
     
     def get_certificate(self) -> str:
         response = self.send_post(self.location)
@@ -184,6 +179,11 @@ class ACME_Client:
         self.certificate = response.text
         client_nice_printer(response.text, "GET CERT TEXT")
         return self.certificate
+    
+    def send_ping(self) -> Response:
+        response = self.send_post(self.location)
+        client_nice_announcement_printer("PINGING ...")
+        return response
 
 
 

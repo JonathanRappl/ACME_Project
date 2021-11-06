@@ -24,7 +24,7 @@ class CustomResolver:
     def resolve(self,request : DNSRecord, handler):
         reply = request.reply()
         qname_str = str(request.q.qname)
-        nice_printer(qname_str, "QNAME STR")
+        # nice_printer(qname_str, "QNAME STR")
         for challenge_id_val in self.zones_dict['challenge_id_vals']:
             if challenge_id_val in qname_str:
                 reply.add_answer(*RR.fromZone(str(request.q.qname) + " 300 IN TXT " + self.zones_dict[challenge_id_val]['key_authorization_hash']))

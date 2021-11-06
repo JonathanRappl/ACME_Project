@@ -55,17 +55,22 @@ def main():
     nice_printer(client.get_server_dict(), "SERVER DICT")
     # -------------------------------------
     client.get_fresh_nonce()
-    time.sleep(5) # -------------------------------------
+    time.sleep(1) # -----------------------
     client.create_account()
-    time.sleep(5)# -------------------------------------
+    time.sleep(1)# ------------------------
     client.request_certificate(arguments['domain'])
-    time.sleep(5) # ---------------------
+    time.sleep(1) # ---------------------
     client.fetch_challenges()
-    time.sleep(5) # -------------------------------------
+    time.sleep(1) # ---------------------
     client.resolve_challenges(arguments['challenge'], arguments['record'])
-    time.sleep(5) # -----------------------
+    while True:
+        time.sleep(1)
+        response = client.send_ping()
+        if response.json()['status'] != 'pending':
+            break
+    # -----------------------------------
     client.finalize_order()
-    time.sleep(5) #--------------------------------------
+    time.sleep(1) #----------------------
     certificate = client.get_certificate()
     open('certs', 'w').write(certificate)
 
