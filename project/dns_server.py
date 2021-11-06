@@ -25,7 +25,7 @@ class CustomResolver:
         if "_acme-challenge" in qname_str:
             reply.add_answer(*RR.fromZone(self.zones_dict[qname_str[16:-1]][0]))
         else:
-            reply.add_answer(*RR.fromZone(self.zones_dict[qname_str][1]))
+            reply.add_answer(*RR.fromZone(self.zones_dict[qname_str[:-1]][1]))
         nice_announcement_printer("PROCESSED DNS REQUEST")
         return reply
         # Replace labels with request label
