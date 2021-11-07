@@ -1,14 +1,17 @@
 # --------------------IMPORTS--------------------
+import base64
 import time
 from typing import List
 import requests
 import json
+import jws
 
 from requests.api import head
 from requests.models import Response
 
 from acme_constants import *
 from jws import JWS
+from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
@@ -204,8 +207,15 @@ class ACME_Client:
             response = self.send_post(self.location)
         client_nice_announcement_printer("PINGING ...")
         client_nice_printer(response.json()['status'], "PING STATUS")
-        client_nice_printer(response.json(), "PING JSON")
+        # client_nice_printer(response.json(), "PING JSON")
         return response
+    
+    def revoke_cert(self):
+        client_nice_announcement_printer("REVOKING CERTIFICATE")
+        der_encoded_cert = x509.load_pem_x509_certificate(self.certificate.encode(), default_backend()).public_bytes(Encoding.DER)
+        encoded_cert = base64.urlsafe_b64encode(der_encoded_cert).rstrip(b'=').decode('utf-8')
+        response = self.send_post(self.server_dict['revokeCert'], {'certificate' : encoded_cert})
+        client_nice_printer(response.status_code, "REVOCATION STATUS CODE")
 
 
 
