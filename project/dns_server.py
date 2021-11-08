@@ -22,6 +22,8 @@ class CustomResolver:
         self.record = record
 
     def resolve(self,request : DNSRecord, handler):
+        self.zones_dict["challenge_id_vals"].sort(key = len)
+        self.zones_dict["challenge_id_vals"].reverse()
         reply = request.reply()
         qname_str = str(request.q.qname)
         # nice_printer(qname_str, "QNAME STR")
