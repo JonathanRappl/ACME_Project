@@ -1,5 +1,4 @@
 from flask import Flask
-import ssl
 import argparse
 
 app = Flask(__name__)
