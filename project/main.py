@@ -88,11 +88,15 @@ def main():
 
     # -------------HTTPS SERVER------------
     https = subprocess.Popen(['python3', 'https_server.py', arguments['record']])
-    time.sleep(20)
-    https.kill()
     # -------------------------------------
     
-    # -----------HTTP SERVER KILL-----------
+    # --------------SHUTDOWN---------------
+    shutdown = subprocess.Popen(['python3', 'http_shutdown.py', arguments['record']])
+    shutdown.wait()
+    # -------------------------------------
+
+    # -----------HTTP SERVER KILL----------
+    https.kill()
     if arguments['challenge'] == 'http01':
         http.kill()
     # -------------------------------------
